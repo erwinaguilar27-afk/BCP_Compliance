@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>PTO &amp; BCP Compliance Calendar</title>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--tx:#1b2330;--mu:#667085;--bd:#e3e6ec;--ac:#2f5bea;--ok:#15803d;--okb:#dcfce7;--wa:#b45309;--wab:#fef3c7;--bad:#b91c1c;--badb:#fee2e2;--wk:#fafbfc;color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#12161d;--card:#1b212b;--tx:#e8ecf3;--mu:#98a2b3;--bd:#2c3441;--ac:#7c9cff;--ok:#4ade80;--okb:#14351f;--wa:#fbbf24;--wab:#3a2c0a;--bad:#f87171;--badb:#3d1717;--wk:#171c24;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#12161d;--card:#1b212b;--tx:#e8ecf3;--mu:#98a2b3;--bd:#2c3441;--ac:#7c9cff;--ok:#4ade80;--okb:#14351f;--wa:#fbbf24;--wab:#3a2c0a;--bad:#f87171;--badb:#3d1717;--wk:#171c24;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.wrap{max-width:1100px;margin:0 auto;padding:16px}
+header{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-bottom:12px}
+h1{font-size:20px;margin:0}h2{font-size:15px;margin:22px 0 8px}
+.nav{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.nav strong{min-width:130px;text-align:center}
+button{font:inherit;border:1px solid var(--bd);background:var(--card);color:var(--tx);padding:6px 11px;border-radius:8px;cursor:pointer}
+button:hover{border-color:var(--ac)}button.pri{background:var(--ac);border-color:var(--ac);color:#fff}
+button.del{color:var(--bad)}
+.note{color:var(--wa);font-size:13px;min-height:0}.note:not(:empty){margin-bottom:8px}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-bottom:12px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:12px 14px}
+.card .l{color:var(--mu);font-size:12px}.card .n{font-size:28px;font-weight:700;line-height:1.2}.card .s{color:var(--mu);font-size:12px}
+.legend{display:flex;gap:12px;flex-wrap:wrap;color:var(--mu);font-size:12px;margin-bottom:8px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:4px;vertical-align:-1px}
+.scroll{overflow-x:auto;border-radius:12px}
+.cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));min-width:680px;background:var(--bd);gap:1px;border:1px solid var(--bd);border-radius:12px;overflow:hidden}
+.dh{background:var(--card);padding:6px;text-align:center;font-size:12px;color:var(--mu);font-weight:600}
+.day{background:var(--card);min-height:96px;padding:4px;cursor:pointer;display:flex;flex-direction:column;gap:2px}
+.day.wk{background:var(--wk)}.day.out{opacity:.45}
+.day .dn{font-size:12px;color:var(--mu);padding:0 2px}
+.day.today .dn{background:var(--ac);color:#fff;border-radius:10px;padding:0 6px;align-self:flex-start}
+.chip{font-size:12px;padding:2px 6px;border-radius:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border:1px solid transparent;cursor:pointer}
+.c2{background:var(--okb);color:var(--ok)}.c1{background:var(--wab);color:var(--wa)}.c0{background:var(--badb);color:var(--bad)}
+.chip.hs{border-style:dashed;border-color:currentColor}
+table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--bd);min-width:640px}
+th,td{padding:8px 10px;text-align:left;border-bottom:1px solid var(--bd)}
+th{font-size:12px;color:var(--mu);font-weight:600}
+td input{width:16px;height:16px;cursor:pointer}
+.b{display:inline-block;padding:1px 8px;border-radius:10px;font-size:12px}
+.ro .day,.ro .chip{cursor:default}.empty{padding:18px;text-align:center;color:var(--mu)}
+dialog{border:1px solid var(--bd);border-radius:14px;background:var(--card);color:var(--tx);padding:18px;width:min(420px,92vw)}
+dialog::backdrop{background:rgba(0,0,0,.45)}
+label{display:block;margin:10px 0 3px;font-size:12px;color:var(--mu)}
+input[type=text],input[type=date],input[type=password],select,textarea{width:100%;padding:7px 9px;border:1px solid var(--bd);border-radius:8px;background:var(--bg);color:var(--tx);font:inherit}
+.row{display:flex;gap:10px}.row>div{flex:1}
+.chk{display:flex;gap:8px;align-items:center;margin:10px 0 0;color:var(--tx);font-size:14px}.chk input{width:16px;height:16px}
+.act{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+#err{color:var(--bad);font-size:12px;min-height:16px;margin-top:8px}
+</style></head>
+<body><div class="wrap">
+<header><h1>PTO &amp; BCP Compliance Calendar</h1>
+<div class="nav"><button id="prev" aria-label="Previous month">‹</button><strong id="ttl"></strong><button id="next" aria-label="Next month">›</button><button id="tod">Today</button><button id="csv">Export CSV</button><button id="adm">Admin sign in</button><button class="pri" id="add" style="display:none">+ Add PTO</button></div></header>
+<div id="note" class="note"></div>
+<section class="cards" id="cards"></section>
+<div class="legend"><span><i style="background:var(--okb)"></i>BCP sent + discussion plotted</span><span><i style="background:var(--wab)"></i>Only one done</span><span><i style="background:var(--badb)"></i>Neither done</span><span>Dashed border = holiday switch</span></div>
+<div class="scroll"><div class="cal" id="cal"></div></div>
+<h2 id="lt"></h2>
+<div class="scroll"><table id="list"></table></div>
+</div>
+<dialog id="dlg">
+<strong id="dt">Add PTO</strong>
+<label for="fn">Name</label><input type="text" id="fn" placeholder="Recruiter or team member">
+<label for="ft">Type</label><select id="ft"><option value="PTO">PTO</option><option value="Holiday Switch">Holiday switch</option></select>
+<div class="row"><div><label for="fs">From</label><input type="date" id="fs"></div><div><label for="fe">To (same day if blank)</label><input type="date" id="fe"></div></div>
+<div class="chk"><input type="checkbox" id="fb"><label for="fb" style="margin:0;color:var(--tx);font-size:14px">BCP sent</label></div>
+<div class="chk"><input type="checkbox" id="fd"><label for="fd" style="margin:0;color:var(--tx);font-size:14px">BCP discussion plotted before PTO</label></div>
+<label for="fo">Notes</label><textarea id="fo" rows="2"></textarea>
+<div id="err"></div>
+<div class="act"><button class="del" id="del" type="button">Delete</button><button id="cancel" type="button">Cancel</button><button class="pri" id="save" type="button">Save</button></div>
+</dialog>
+<dialog id="adlg"><strong>Admin sign in</strong><label for="ak">Admin key</label><input type="password" id="ak" autocomplete="off"><div id="aerr" style="color:var(--bad);font-size:12px;min-height:16px;margin-top:8px"></div><div class="act"><button id="acancel" type="button">Cancel</button><button class="pri" id="alogin" type="button">Sign in</button></div></dialog>
+<script>
+const $=s=>document.querySelector(s);
+let entries=[],col=null,editing=null,view=new Date();view.setDate(1);
+const iso=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+const parse=s=>{const[a,b,c]=s.split('-').map(Number);return new Date(a,b-1,c)};
+const todayS=iso(new Date());
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const st=e=>(e.bcpSent?1:0)+(e.bcpDiscussion?1:0);
+const inr=(a,b)=>entries.filter(e=>e.start<=b&&e.end>=a);
+const ppl=l=>new Set(l.map(e=>String(e.name||'').trim().toLowerCase())).size;
+const days=(l,a,b)=>l.reduce((n,e)=>{const s=e.start<a?a:e.start,f=e.end>b?b:e.end;return n+Math.round((parse(f)-parse(s))/864e5)+1},0);
+const fd=s=>parse(s).toLocaleDateString('en-US',{month:'short',day:'numeric'});
+const rng=e=>e.start===e.end?fd(e.start):fd(e.start)+' – '+fd(e.end);
+const note=t=>{$('#note').textContent=t||''};
+const badge=e=>{const n=st(e);return '<span class="b c'+n+'">'+['Missing BCP','Partial','Compliant'][n]+'</span>'};
+
+function render(){
+  const y=view.getFullYear(),m=view.getMonth();
+  const mname=view.toLocaleDateString('en-US',{month:'long'});
+  $('#ttl').textContent=mname+' '+y;
+  const ms=iso(new Date(y,m,1)),me=iso(new Date(y,m+1,0)),ys=y+'-01-01',ye=y+'-12-31';
+  const t=new Date(),ws=new Date(t.getFullYear(),t.getMonth(),t.getDate()-t.getDay()),we=new Date(ws.getFullYear(),ws.getMonth(),ws.getDate()+6);
+  const W=inr(iso(ws),iso(we)),M=inr(ms,me),Y=inr(ys,ye);
+  const need=entries.filter(e=>e.end>=todayS&&st(e)<2).length;
+  const card=(l,n,s)=>'<div class="card"><div class="l">'+l+'</div><div class="n">'+n+'</div><div class="s">'+s+'</div></div>';
+  $('#cards').innerHTML=
+    card('Out this week',ppl(W),fd(iso(ws))+' – '+fd(iso(we))+' · '+W.length+' entries')+
+    card('Out in '+mname,ppl(M),M.length+' entries · '+days(M,ms,me)+' days')+
+    card('PTOs plotted in '+y,Y.length,ppl(Y)+' people · '+days(Y,ys,ye)+' days')+
+    card('Needs BCP attention',need,'upcoming, missing BCP or discussion');
+  let h=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d=>'<div class="dh">'+d+'</div>').join('');
+  const g0=new Date(y,m,1-new Date(y,m,1).getDay());
+  for(let i=0;i<42;i++){
+    const d=new Date(g0.getFullYear(),g0.getMonth(),g0.getDate()+i),s=iso(d),wk=d.getDay()%6===0;
+    if(i>=35&&d.getMonth()!==m)break;
+    const ch=entries.filter(e=>e.start<=s&&e.end>=s).sort((a,b)=>String(a.name).localeCompare(b.name))
+      .map(e=>'<div class="chip c'+st(e)+(e.type==='Holiday Switch'?' hs':'')+'" data-id="'+esc(e.id)+'" title="'+esc(e.name+' · '+e.type+' · '+rng(e))+'">'+esc(e.name)+'</div>').join('');
+    h+='<div class="day'+(wk?' wk':'')+(d.getMonth()!==m?' out':'')+(s===todayS?' today':'')+'" data-d="'+s+'"><span class="dn">'+d.getDate()+'</span>'+ch+'</div>';
+  }
+  $('#cal').innerHTML=h;
+  $('#lt').textContent='Entries in '+mname+' '+y;
+  const rows=M.slice().sort((a,b)=>a.start.localeCompare(b.start)||String(a.name).localeCompare(b.name));
+  $('#list').innerHTML=rows.length?
+    '<tr><th>Name</th><th>Type</th><th>Dates</th><th>BCP sent</th><th>BCP discussion</th><th>Status</th><th></th></tr>'+
+    rows.map(e=>'<tr><td>'+esc(e.name)+'</td><td>'+esc(e.type)+'</td><td>'+rng(e)+'</td>'+
+      '<td><input type="checkbox" data-f="bcpSent" data-id="'+esc(e.id)+'"'+(e.bcpSent?' checked':'')+(isAdmin?'':' disabled')+'></td>'+
+      '<td><input type="checkbox" data-f="bcpDiscussion" data-id="'+esc(e.id)+'"'+(e.bcpDiscussion?' checked':'')+(isAdmin?'':' disabled')+'></td>'+
+      '<td>'+badge(e)+'</td><td>'+(isAdmin?'<button data-id="'+esc(e.id)+'">Edit</button>':'')+'</td></tr>').join('')
+    :'<tr><td class="empty">No one plotted for this month yet.</td></tr>';
+}
+
+function openForm(e,d){
+  editing=e||null;
+  $('#dt').textContent=e?'Edit entry':'Add PTO';
+  $('#fn').value=e?e.name:'';$('#ft').value=e?e.type:'PTO';
+  $('#fs').value=e?e.start:(d||todayS);$('#fe').value=e&&e.end!==e.start?e.end:'';
+  $('#fb').checked=!!(e&&e.bcpSent);$('#fd').checked=!!(e&&e.bcpDiscussion);
+  $('#fo').value=e&&e.note?e.note:'';$('#err').textContent='';
+  $('#del').style.display=e?'':'none';
+  $('#dlg').showModal();
+}
+let adminKey='',isAdmin=false;
+const AK='pto-bcp-admin-key';
+function setAdmin(on,clear){
+  isAdmin=on;
+  if(!on){adminKey='';try{if(clear!==false)localStorage.removeItem(AK)}catch(e){}}
+  $('#add').style.display=on?'':'none';
+  $('#adm').textContent=on?'Admin: sign out':'Admin sign in';
+  document.body.classList.toggle('ro',!on);
+  render();
+}
+const werr=(err,m)=>{
+  if(String(err.message).includes('Not authorized')){setAdmin(false);load().then(()=>note('Your admin session is no longer valid. Please sign in again.'))}
+  else note(m);
+};
+const API_URL=''; // paste your Apps Script web app URL here (see README)
+const KEY='pto-bcp-cache';
+const call=async p=>{const r=await fetch(API_URL+'?'+new URLSearchParams(p));const j=await r.json();if(!j.ok)throw new Error(j.error||'failed');return j};
+const cache=()=>{try{localStorage.setItem(KEY,JSON.stringify(entries))}catch(e){}};
+async function load(){
+  try{const j=await call({action:'list'});entries=j.entries;cache();note('')}
+  catch(err){note('Could not reach the shared sheet. Showing the last saved copy.')}
+  render();
+}
+async function persist(data,id){
+  id=id||('e'+Date.now().toString(36)+Math.random().toString(36).slice(2,6));
+  const e={...data,id},i=entries.findIndex(x=>x.id===id);
+  if(i<0)entries.push(e);else entries[i]=e;
+  render();cache();
+  if(!API_URL)return;
+  try{await call({action:'save',key:adminKey,data:JSON.stringify(e)})}catch(err){werr(err,'Save failed. Please refresh and try again.')}
+}
+async function remove(id){
+  entries=entries.filter(x=>x.id!==id);render();cache();
+  if(!API_URL)return;
+  try{await call({action:'delete',key:adminKey,id})}catch(err){werr(err,'Delete failed. Please refresh and try again.')}
+}
+$('#save').onclick=async()=>{
+  const name=$('#fn').value.trim(),s=$('#fs').value,e=$('#fe').value||s;
+  if(!name||!s){$('#err').textContent='Please add a name and a start date.';return}
+  if(e<s){$('#err').textContent='The end date can’t be before the start date.';return}
+  const data={name,type:$('#ft').value,start:s,end:e,bcpSent:$('#fb').checked,bcpDiscussion:$('#fd').checked,note:$('#fo').value.trim()};
+  $('#dlg').close();
+  await persist(data,editing?editing.id:null);
+};
+$('#cancel').onclick=()=>$('#dlg').close();
+$('#del').onclick=async()=>{if(editing){const id=editing.id;$('#dlg').close();await remove(id)}};
+$('#prev').onclick=()=>{view.setMonth(view.getMonth()-1);render()};
+$('#next').onclick=()=>{view.setMonth(view.getMonth()+1);render()};
+$('#tod').onclick=()=>{view=new Date();view.setDate(1);render()};
+$('#add').onclick=()=>openForm(null);
+document.addEventListener('click',ev=>{
+  if(ev.target.closest('input,dialog')||!isAdmin)return;
+  const c=ev.target.closest('[data-id]');
+  if(c){const e=entries.find(x=>x.id===c.dataset.id);if(e)openForm(e);return}
+  const d=ev.target.closest('[data-d]');if(d)openForm(null,d.dataset.d);
+});
+document.addEventListener('change',ev=>{
+  const f=ev.target.dataset&&ev.target.dataset.f;if(!f)return;
+  const e=entries.find(x=>x.id===ev.target.dataset.id);if(!e)return;
+  const {id,...rest}=e;persist({...rest,[f]:ev.target.checked},id);
+});
+$('#adm').onclick=()=>{if(isAdmin)setAdmin(false);else{$('#ak').value='';$('#aerr').textContent='';$('#adlg').showModal()}};
+$('#acancel').onclick=()=>$('#adlg').close();
+$('#alogin').onclick=async()=>{
+  const k=$('#ak').value.trim();
+  if(!k){$('#aerr').textContent='Enter your admin key.';return}
+  $('#aerr').textContent='Checking…';
+  try{await call({action:'auth',key:k});adminKey=k;try{localStorage.setItem(AK,k)}catch(e){}$('#adlg').close();setAdmin(true)}
+  catch(err){$('#aerr').textContent=String(err.message).includes('Not authorized')?'That key isn’t valid.':'Could not reach the server.'}
+};
+$('#csv').onclick=()=>{
+  const q=v=>{let t=String(v==null?'':v);if(/^[=+\-@\t\r]/.test(t))t="'"+t;return '"'+t.replace(/"/g,'""')+'"'};
+  const rows=[['Name','Type','Start','End','Days','BCP sent','BCP discussion plotted','Status','Notes']];
+  entries.slice().sort((a,b)=>a.start.localeCompare(b.start)||String(a.name).localeCompare(b.name)).forEach(e=>rows.push([e.name,e.type,e.start,e.end,days([e],e.start,e.end),e.bcpSent?'Yes':'No',e.bcpDiscussion?'Yes':'No',['Missing BCP','Partial','Compliant'][st(e)],e.note||'']));
+  const blob=new Blob(['\ufeff'+rows.map(r=>r.map(q).join(',')).join('\r\n')],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='pto-bcp-'+todayS+'.csv';
+  document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+};
+(function init(){
+  try{entries=JSON.parse(localStorage.getItem(KEY)||'[]')}catch(e){entries=[]}
+  setAdmin(false,false);
+  if(!API_URL){$('#adm').style.display='none';setAdmin(true);note('Demo mode: set API_URL in index.html to connect the shared Google Sheet. Entries are only stored in this browser.');return}
+  load();setInterval(load,60000);
+  let k='';try{k=localStorage.getItem(AK)||''}catch(e){}
+  if(k)call({action:'auth',key:k}).then(()=>{adminKey=k;setAdmin(true)}).catch(err=>{if(String(err.message).includes('Not authorized')){try{localStorage.removeItem(AK)}catch(e){}}});
+})();
+</script></body></html>
