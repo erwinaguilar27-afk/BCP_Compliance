@@ -52,7 +52,7 @@ input[type=text],input[type=date],input[type=password],select,textarea{width:100
 <div class="nav"><button id="prev" aria-label="Previous month">‹</button><strong id="ttl"></strong><button id="next" aria-label="Next month">›</button><button id="tod">Today</button><button id="csv">Export CSV</button><button id="adm">Admin sign in</button><button class="pri" id="add" style="display:none">+ Add PTO</button></div></header>
 <div id="note" class="note"></div>
 <section class="cards" id="cards"></section>
-<div class="legend"><span><i style="background:var(--okb)"></i>BCP sent + discussion plotted</span><span><i style="background:var(--wab)"></i>Only one done</span><span><i style="background:var(--badb)"></i>Neither done</span><span>Dashed border = holiday switch</span></div>
+<div class="legend"><span><i style="background:var(--okb)"></i>BCP sent + discussion plotted</span><span><i style="background:var(--wab)"></i>Only one done</span><span><i style="background:var(--badb)"></i>Neither done</span><span>Dashed border = holiday switch</span><span>🎂 = birthday leave</span></div>
 <div class="scroll"><div class="cal" id="cal"></div></div>
 <h2 id="lt"></h2>
 <div class="scroll"><table id="list"></table></div>
@@ -60,7 +60,7 @@ input[type=text],input[type=date],input[type=password],select,textarea{width:100
 <dialog id="dlg">
 <strong id="dt">Add PTO</strong>
 <label for="fn">Name</label><input type="text" id="fn" placeholder="Recruiter or team member">
-<label for="ft">Type</label><select id="ft"><option value="PTO">PTO</option><option value="Holiday Switch">Holiday switch</option></select>
+<label for="ft">Type</label><select id="ft"><option value="PTO">PTO</option><option value="Holiday Switch">Holiday switch</option><option value="Birthday Leave">Birthday leave</option></select>
 <div class="row"><div><label for="fs">From</label><input type="date" id="fs"></div><div><label for="fe">To (same day if blank)</label><input type="date" id="fe"></div></div>
 <div class="chk"><input type="checkbox" id="fb"><label for="fb" style="margin:0;color:var(--tx);font-size:14px">BCP sent</label></div>
 <div class="chk"><input type="checkbox" id="fd"><label for="fd" style="margin:0;color:var(--tx);font-size:14px">BCP discussion plotted before PTO</label></div>
@@ -105,7 +105,7 @@ function render(){
     const d=new Date(g0.getFullYear(),g0.getMonth(),g0.getDate()+i),s=iso(d),wk=d.getDay()%6===0;
     if(i>=35&&d.getMonth()!==m)break;
     const ch=entries.filter(e=>e.start<=s&&e.end>=s).sort((a,b)=>String(a.name).localeCompare(b.name))
-      .map(e=>'<div class="chip c'+st(e)+(e.type==='Holiday Switch'?' hs':'')+'" data-id="'+esc(e.id)+'" title="'+esc(e.name+' · '+e.type+' · '+rng(e))+'">'+esc(e.name)+'</div>').join('');
+      .map(e=>'<div class="chip c'+st(e)+(e.type==='Holiday Switch'?' hs':'')+'" data-id="'+esc(e.id)+'" title="'+esc(e.name+' · '+e.type+' · '+rng(e))+'">'+(e.type==='Birthday Leave'?'🎂 ':'')+esc(e.name)+'</div>').join('');
     h+='<div class="day'+(wk?' wk':'')+(d.getMonth()!==m?' out':'')+(s===todayS?' today':'')+'" data-d="'+s+'"><span class="dn">'+d.getDate()+'</span>'+ch+'</div>';
   }
   $('#cal').innerHTML=h;
@@ -144,7 +144,7 @@ const werr=(err,m)=>{
   if(String(err.message).includes('Not authorized')){setAdmin(false);load().then(()=>note('Your admin session is no longer valid. Please sign in again.'))}
   else note(m);
 };
-const API_URL='https://script.google.com/macros/s/AKfycbwKXeU_8a9Pb84y8JKjG1EyV0rEHokGtrv5v6JFZRWuwF3nXuj8Y5OKFDOuqStphiN3tQ/exec'; // paste your Apps Script web app URL here (see README)
+const API_URL=''; // paste your Apps Script web app URL here (see README)
 const KEY='pto-bcp-cache';
 const call=async p=>{const r=await fetch(API_URL+'?'+new URLSearchParams(p));const j=await r.json();if(!j.ok)throw new Error(j.error||'failed');return j};
 const cache=()=>{try{localStorage.setItem(KEY,JSON.stringify(entries))}catch(e){}};
