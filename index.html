@@ -174,7 +174,7 @@ const werr=(err,m)=>{
   if(String(err.message).includes('Not authorized')){setAdmin(false);load().then(()=>note('Your admin session is no longer valid. Please sign in again.'))}
   else note(m);
 };
-const API_URL=''; // paste your Apps Script web app URL here (see README)
+const API_URL='https://script.google.com/macros/s/AKfycbyEMUW1p1Grgjw1rkRW59qbFgW_7ONDevuAYXL7clBXytJacI-n9IqEaUvwjUkZqPKvMg/exec'; // paste your Apps Script web app URL here (see README)
 const KEY='pto-bcp-cache';
 const call=async p=>{const r=await fetch(API_URL+'?'+new URLSearchParams(p));const j=await r.json();if(!j.ok)throw new Error(j.error||'failed');return j};
 const cache=()=>{try{localStorage.setItem(KEY,JSON.stringify(entries))}catch(e){}};
