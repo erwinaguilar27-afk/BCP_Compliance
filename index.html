@@ -37,7 +37,7 @@ th,td{padding:8px 10px;text-align:left;border-bottom:1px solid var(--bd)}
 th{font-size:12px;color:var(--mu);font-weight:600}
 td input{width:16px;height:16px;cursor:pointer}
 .b{display:inline-block;padding:1px 8px;border-radius:10px;font-size:12px}
-.ro .day,.ro .chip{cursor:default}.empty{padding:18px;text-align:center;color:var(--mu)}
+.ro .day,.ro .chip{cursor:default}.nav select{width:auto;max-width:180px}.bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px}.bl{color:var(--mu);font-size:12px}.seg{display:flex}.seg button{border-radius:0;margin-left:-1px}.seg button:first-child{border-radius:8px 0 0 8px;margin-left:0}.seg button:last-child{border-radius:0 8px 8px 0}.seg button.on{background:var(--ac);border-color:var(--ac);color:#fff}#wr{min-width:130px;text-align:center}.card .n.ok{color:var(--ok)}.card .n.wa{color:var(--wa)}.card .n.bad{color:var(--bad)}.card.wide{grid-column:span 2}.two{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:4px 0}.arow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:7px 0;border-top:1px solid var(--bd)}.arow .m{color:var(--mu);font-size:13px}@media(max-width:520px){.card.wide{grid-column:auto}.two{grid-template-columns:1fr}}.empty{padding:18px;text-align:center;color:var(--mu)}
 dialog{border:1px solid var(--bd);border-radius:14px;background:var(--card);color:var(--tx);padding:18px;width:min(420px,92vw)}
 dialog::backdrop{background:rgba(0,0,0,.45)}
 label{display:block;margin:10px 0 3px;font-size:12px;color:var(--mu)}
@@ -49,10 +49,12 @@ input[type=text],input[type=date],input[type=password],select,textarea{width:100
 </style></head>
 <body><div class="wrap">
 <header><h1>PTO &amp; BCP Compliance Calendar</h1>
-<div class="nav"><button id="prev" aria-label="Previous month">‹</button><strong id="ttl"></strong><button id="next" aria-label="Next month">›</button><button id="tod">Today</button><button id="csv">Export CSV</button><button id="adm">Admin sign in</button><button class="pri" id="add" style="display:none">+ Add PTO</button></div></header>
+<div class="nav"><button id="prev" aria-label="Previous month">‹</button><strong id="ttl"></strong><button id="next" aria-label="Next month">›</button><button id="tod">Today</button><select id="who" aria-label="Filter by name"><option value="">All people</option></select><button id="csv">Export CSV</button><button id="adm">Admin sign in</button><button class="pri" id="add" style="display:none">+ Add PTO</button></div></header>
 <div id="note" class="note"></div>
+<div class="bar"><span class="bl">Show</span><div class="seg"><button data-p="week">Week</button><button data-p="month">Month</button><button data-p="year">Year</button></div><div id="wnav" class="nav" style="display:none"><button id="pw" aria-label="Previous week">‹</button><span id="wr"></span><button id="nw" aria-label="Next week">›</button></div></div>
 <section class="cards" id="cards"></section>
-<div class="legend"><span><i style="background:var(--okb)"></i>BCP sent + discussion plotted</span><span><i style="background:var(--wab)"></i>Only one done</span><span><i style="background:var(--badb)"></i>Neither done</span><span>Dashed border = holiday switch</span><span>🎂 = birthday leave</span></div>
+<section class="card" id="attn" style="margin-bottom:12px"></section>
+<div class="legend"><span><i style="background:var(--okb)"></i>BCP sent + discussion plotted</span><span><i style="background:var(--wab)"></i>Only one done</span><span><i style="background:var(--badb)"></i>Neither done</span><span>Dashed border = holiday switch</span><span>🎂 = birthday leave</span><span>Compliance % = entries with BCP sent and discussion plotted</span></div>
 <div class="scroll"><div class="cal" id="cal"></div></div>
 <h2 id="lt"></h2>
 <div class="scroll"><table id="list"></table></div>
@@ -77,7 +79,11 @@ const parse=s=>{const[a,b,c]=s.split('-').map(Number);return new Date(a,b-1,c)};
 const todayS=iso(new Date());
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const st=e=>(e.bcpSent?1:0)+(e.bcpDiscussion?1:0);
-const inr=(a,b)=>entries.filter(e=>e.start<=b&&e.end>=a);
+let who='',sig='',period='month';
+const curWeek=()=>{const t=new Date();return new Date(t.getFullYear(),t.getMonth(),t.getDate()-t.getDay())};
+let wk=curWeek();
+const vis=()=>who?entries.filter(e=>String(e.name||'').trim().toLowerCase()===who):entries;
+const inr=(a,b)=>vis().filter(e=>e.start<=b&&e.end>=a);
 const ppl=l=>new Set(l.map(e=>String(e.name||'').trim().toLowerCase())).size;
 const days=(l,a,b)=>l.reduce((n,e)=>{const s=e.start<a?a:e.start,f=e.end>b?b:e.end;return n+Math.round((parse(f)-parse(s))/864e5)+1},0);
 const fd=s=>parse(s).toLocaleDateString('en-US',{month:'short',day:'numeric'});
@@ -87,37 +93,61 @@ const badge=e=>{const n=st(e);return '<span class="b c'+n+'">'+['Missing BCP','P
 
 function render(){
   const y=view.getFullYear(),m=view.getMonth();
+  const names=new Map();
+  entries.forEach(e=>{const k=String(e.name||'').trim().toLowerCase();if(k&&!names.has(k))names.set(k,String(e.name).trim())});
+  if(who&&!names.has(who))who='';
+  const list=[...names].sort((a,b)=>a[1].localeCompare(b[1])),ns=JSON.stringify(list);
+  if(ns!==sig){sig=ns;$('#who').innerHTML='<option value="">All people</option>'+list.map(([k,v])=>'<option value="'+esc(k)+'">'+esc(v)+'</option>').join('')}
+  $('#who').value=who;
   const mname=view.toLocaleDateString('en-US',{month:'long'});
   $('#ttl').textContent=mname+' '+y;
   const ms=iso(new Date(y,m,1)),me=iso(new Date(y,m+1,0)),ys=y+'-01-01',ye=y+'-12-31';
-  const t=new Date(),ws=new Date(t.getFullYear(),t.getMonth(),t.getDate()-t.getDay()),we=new Date(ws.getFullYear(),ws.getMonth(),ws.getDate()+6);
+  const ws=new Date(wk),we=new Date(ws.getFullYear(),ws.getMonth(),ws.getDate()+6);
   const W=inr(iso(ws),iso(we)),M=inr(ms,me),Y=inr(ys,ye);
-  const need=entries.filter(e=>e.end>=todayS&&st(e)<2).length;
-  const card=(l,n,s)=>'<div class="card"><div class="l">'+l+'</div><div class="n">'+n+'</div><div class="s">'+s+'</div></div>';
-  $('#cards').innerHTML=
-    card('Out this week',ppl(W),fd(iso(ws))+' – '+fd(iso(we))+' · '+W.length+' entries')+
+  const need=vis().filter(e=>e.end>=todayS&&st(e)<2).length;
+  const card=(l,n,s,c)=>'<div class="card"><div class="l">'+l+'</div><div class="n'+(c?' '+c:'')+'">'+n+'</div><div class="s">'+s+'</div></div>';
+  const wr=fd(iso(ws))+' – '+fd(iso(we)),cur=iso(ws)===iso(curWeek());
+  const P=period==='week'?W:period==='month'?M:Y;
+  const plabel=period==='week'?'week of '+fd(iso(ws)):period==='month'?mname+' '+y:String(y);
+  const rate=l=>{const f=l.filter(e=>st(e)===2).length;return l.length?{p:Math.round(f/l.length*100),t:f+' of '+l.length+' fully compliant'}:{p:null,t:'No entries'}};
+  const rc=r=>r.p==null?'':r.p>=80?'ok':r.p>=50?'wa':'bad';
+  const rw=rate(W),rm=rate(M),ry=rate(Y);
+  const stat=(l,r)=>'<div><div class="l">'+l+'</div><div class="n '+rc(r)+'">'+(r.p==null?'—':r.p+'%')+'</div><div class="s">'+r.t+'</div></div>';
+  const comp='<div class="card wide"><div class="l">Compliance rate</div><div class="two">'+stat('Per week · '+wr,rw)+stat('Per month · '+mname+' '+y,rm)+'</div><div class="s">Year '+y+': '+(ry.p==null?'—':ry.p+'%')+' · fully compliant = BCP sent and discussion plotted</div></div>';
+  $('#cards').innerHTML=(who?
+    card(cur?'This week':'Week of '+fd(iso(ws)),W.length,days(W,iso(ws),iso(we))+' days · '+wr)+
+    card(mname,M.length,days(M,ms,me)+' days plotted')+
+    card('Whole year '+y,Y.length,days(Y,ys,ye)+' days plotted')+
+    card('Upcoming PTOs incomplete',need,'missing BCP or discussion'):
+    card('Out '+(cur?'this week':'week of '+fd(iso(ws))),ppl(W),wr+' · '+W.length+' entries')+
     card('Out in '+mname,ppl(M),M.length+' entries · '+days(M,ms,me)+' days')+
     card('PTOs plotted in '+y,Y.length,ppl(Y)+' people · '+days(Y,ys,ye)+' days')+
-    card('Needs BCP attention',need,'upcoming, missing BCP or discussion');
+    card('Upcoming PTOs incomplete',need,'missing BCP or discussion'))+comp;
+  const miss=W.filter(e=>st(e)<2).sort((a,b)=>(a.bcpSent?1:0)-(b.bcpSent?1:0)||a.start.localeCompare(b.start));
+  $('#attn').innerHTML='<div class="l">Needs BCP attention · '+(cur?'this week':'week of '+fd(iso(ws)))+' ('+wr+')'+(who?' · '+esc(names.get(who)):'')+'</div>'+
+    (miss.length?'<div class="n">'+miss.length+'</div>'+miss.map(e=>'<div class="arow" data-id="'+esc(e.id)+'"><strong>'+esc(e.name)+'</strong><span class="m">'+esc(e.type)+' · '+rng(e)+'</span>'+(e.bcpSent?'':'<span class="b c0">BCP not sent</span>')+(e.bcpDiscussion?'':'<span class="b c1">Discussion not plotted</span>')+'</div>').join(''):
+    '<div class="s" style="margin-top:6px">'+(W.length?'✓ Everyone out '+(cur?'this week':'that week')+' has sent their BCP and plotted the discussion.':'No one is out '+(cur?'this week':'that week')+'.')+'</div>');
+  $('#wr').textContent=wr;$('#wnav').style.display=period==='week'?'':'none';
+  document.querySelectorAll('.seg button').forEach(b=>b.classList.toggle('on',b.dataset.p===period));
   let h=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d=>'<div class="dh">'+d+'</div>').join('');
   const g0=new Date(y,m,1-new Date(y,m,1).getDay());
   for(let i=0;i<42;i++){
     const d=new Date(g0.getFullYear(),g0.getMonth(),g0.getDate()+i),s=iso(d),wk=d.getDay()%6===0;
     if(i>=35&&d.getMonth()!==m)break;
-    const ch=entries.filter(e=>e.start<=s&&e.end>=s).sort((a,b)=>String(a.name).localeCompare(b.name))
+    const ch=vis().filter(e=>e.start<=s&&e.end>=s).sort((a,b)=>String(a.name).localeCompare(b.name))
       .map(e=>'<div class="chip c'+st(e)+(e.type==='Holiday Switch'?' hs':'')+'" data-id="'+esc(e.id)+'" title="'+esc(e.name+' · '+e.type+' · '+rng(e))+'">'+(e.type==='Birthday Leave'?'🎂 ':'')+esc(e.name)+'</div>').join('');
     h+='<div class="day'+(wk?' wk':'')+(d.getMonth()!==m?' out':'')+(s===todayS?' today':'')+'" data-d="'+s+'"><span class="dn">'+d.getDate()+'</span>'+ch+'</div>';
   }
   $('#cal').innerHTML=h;
-  $('#lt').textContent='Entries in '+mname+' '+y;
-  const rows=M.slice().sort((a,b)=>a.start.localeCompare(b.start)||String(a.name).localeCompare(b.name));
+  $('#lt').textContent=(who?names.get(who)+'’s entries':'Entries')+' · '+plabel;
+  const rows=P.slice().sort((a,b)=>a.start.localeCompare(b.start)||String(a.name).localeCompare(b.name));
   $('#list').innerHTML=rows.length?
     '<tr><th>Name</th><th>Type</th><th>Dates</th><th>BCP sent</th><th>BCP discussion</th><th>Status</th><th></th></tr>'+
     rows.map(e=>'<tr><td>'+esc(e.name)+'</td><td>'+esc(e.type)+'</td><td>'+rng(e)+'</td>'+
       '<td><input type="checkbox" data-f="bcpSent" data-id="'+esc(e.id)+'"'+(e.bcpSent?' checked':'')+(isAdmin?'':' disabled')+'></td>'+
       '<td><input type="checkbox" data-f="bcpDiscussion" data-id="'+esc(e.id)+'"'+(e.bcpDiscussion?' checked':'')+(isAdmin?'':' disabled')+'></td>'+
       '<td>'+badge(e)+'</td><td>'+(isAdmin?'<button data-id="'+esc(e.id)+'">Edit</button>':'')+'</td></tr>').join('')
-    :'<tr><td class="empty">No one plotted for this month yet.</td></tr>';
+    :'<tr><td class="empty">'+('No entries in this period'+(who?' for '+esc(names.get(who)):'')+'.')+'</td></tr>';
 }
 
 function openForm(e,d){
@@ -144,7 +174,7 @@ const werr=(err,m)=>{
   if(String(err.message).includes('Not authorized')){setAdmin(false);load().then(()=>note('Your admin session is no longer valid. Please sign in again.'))}
   else note(m);
 };
-const API_URL='https://script.google.com/macros/s/AKfycbyEMUW1p1Grgjw1rkRW59qbFgW_7ONDevuAYXL7clBXytJacI-n9IqEaUvwjUkZqPKvMg/exec'; // paste your Apps Script web app URL here (see README)
+const API_URL=''; // paste your Apps Script web app URL here (see README)
 const KEY='pto-bcp-cache';
 const call=async p=>{const r=await fetch(API_URL+'?'+new URLSearchParams(p));const j=await r.json();if(!j.ok)throw new Error(j.error||'failed');return j};
 const cache=()=>{try{localStorage.setItem(KEY,JSON.stringify(entries))}catch(e){}};
@@ -178,7 +208,7 @@ $('#cancel').onclick=()=>$('#dlg').close();
 $('#del').onclick=async()=>{if(editing){const id=editing.id;$('#dlg').close();await remove(id)}};
 $('#prev').onclick=()=>{view.setMonth(view.getMonth()-1);render()};
 $('#next').onclick=()=>{view.setMonth(view.getMonth()+1);render()};
-$('#tod').onclick=()=>{view=new Date();view.setDate(1);render()};
+$('#tod').onclick=()=>{view=new Date();view.setDate(1);wk=curWeek();render()};
 $('#add').onclick=()=>openForm(null);
 document.addEventListener('click',ev=>{
   if(ev.target.closest('input,dialog')||!isAdmin)return;
@@ -191,6 +221,10 @@ document.addEventListener('change',ev=>{
   const e=entries.find(x=>x.id===ev.target.dataset.id);if(!e)return;
   const {id,...rest}=e;persist({...rest,[f]:ev.target.checked},id);
 });
+$('#who').onchange=()=>{who=$('#who').value;render()};
+document.querySelectorAll('.seg button').forEach(b=>b.onclick=()=>{period=b.dataset.p;render()});
+const shiftWeek=n=>{wk=new Date(wk.getFullYear(),wk.getMonth(),wk.getDate()+n);view=new Date(wk.getFullYear(),wk.getMonth(),1);render()};
+$('#pw').onclick=()=>shiftWeek(-7);$('#nw').onclick=()=>shiftWeek(7);
 $('#adm').onclick=()=>{if(isAdmin)setAdmin(false);else{$('#ak').value='';$('#aerr').textContent='';$('#adlg').showModal()}};
 $('#acancel').onclick=()=>$('#adlg').close();
 $('#alogin').onclick=async()=>{
