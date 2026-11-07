@@ -54,7 +54,7 @@ input[type=text],input[type=date],input[type=password],select,textarea{width:100
 <div class="bar"><span class="bl">Show</span><div class="seg"><button data-p="week">Week</button><button data-p="month">Month</button><button data-p="year">Year</button></div><div id="wnav" class="nav" style="display:none"><button id="pw" aria-label="Previous week">‹</button><span id="wr"></span><button id="nw" aria-label="Next week">›</button></div></div>
 <section class="cards" id="cards"></section>
 <section class="card" id="attn" style="margin-bottom:12px"></section>
-<div class="legend"><span><i style="background:var(--okb)"></i>BCP sent + discussion plotted</span><span><i style="background:var(--wab)"></i>Only one done</span><span><i style="background:var(--badb)"></i>Neither done</span><span>Dashed border = holiday switch</span><span>🎂 = birthday leave</span><span>Compliance % = entries with BCP sent and discussion plotted</span></div>
+<div class="legend"><span><i style="background:var(--okb)"></i>BCP sent + discussion plotted</span><span><i style="background:var(--wab)"></i>Only one done</span><span><i style="background:var(--badb)"></i>Neither done</span><span>Dashed border = holiday switch</span><span>🎂 = birthday leave</span><span>Compliance % = entries with BCP sent and discussion done (plotted, happened on weekly check-in, or not needed)</span></div>
 <div class="scroll"><div class="cal" id="cal"></div></div>
 <h2 id="lt"></h2>
 <div class="scroll"><table id="list"></table></div>
@@ -65,7 +65,7 @@ input[type=text],input[type=date],input[type=password],select,textarea{width:100
 <label for="ft">Type</label><select id="ft"><option value="PTO">PTO</option><option value="Holiday Switch">Holiday switch</option><option value="Birthday Leave">Birthday leave</option></select>
 <div class="row"><div><label for="fs">From</label><input type="date" id="fs"></div><div><label for="fe">To (same day if blank)</label><input type="date" id="fe"></div></div>
 <div class="chk"><input type="checkbox" id="fb"><label for="fb" style="margin:0;color:var(--tx);font-size:14px">BCP sent</label></div>
-<div class="chk"><input type="checkbox" id="fd"><label for="fd" style="margin:0;color:var(--tx);font-size:14px">BCP discussion plotted before PTO</label></div>
+<label for="fv">BCP discussion</label><select id="fv"><option value="">Not done yet</option><option value="plotted">Plotted before PTO</option><option value="weekly">Happened on weekly check-in</option><option value="notneeded">Not needed</option></select>
 <label for="fo">Notes</label><textarea id="fo" rows="2"></textarea>
 <div id="err"></div>
 <div class="act"><button class="del" id="del" type="button">Delete</button><button id="cancel" type="button">Cancel</button><button class="pri" id="save" type="button">Save</button></div>
@@ -79,6 +79,8 @@ const parse=s=>{const[a,b,c]=s.split('-').map(Number);return new Date(a,b-1,c)};
 const todayS=iso(new Date());
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const st=e=>(e.bcpSent?1:0)+(e.bcpDiscussion?1:0);
+const via=e=>e.bcpDiscussion?(e.discussionVia||'plotted'):'';
+const VIA=[['','Not done'],['plotted','Plotted'],['weekly','Weekly check-in'],['notneeded','Not needed']],VL=Object.fromEntries(VIA);
 let who='',sig='',period='month';
 const curWeek=()=>{const t=new Date();return new Date(t.getFullYear(),t.getMonth(),t.getDate()-t.getDay())};
 let wk=curWeek();
@@ -113,7 +115,7 @@ function render(){
   const rc=r=>r.p==null?'':r.p>=80?'ok':r.p>=50?'wa':'bad';
   const rw=rate(W),rm=rate(M),ry=rate(Y);
   const stat=(l,r)=>'<div><div class="l">'+l+'</div><div class="n '+rc(r)+'">'+(r.p==null?'—':r.p+'%')+'</div><div class="s">'+r.t+'</div></div>';
-  const comp='<div class="card wide"><div class="l">Compliance rate</div><div class="two">'+stat('Per week · '+wr,rw)+stat('Per month · '+mname+' '+y,rm)+'</div><div class="s">Year '+y+': '+(ry.p==null?'—':ry.p+'%')+' · fully compliant = BCP sent and discussion plotted</div></div>';
+  const comp='<div class="card wide"><div class="l">Compliance rate</div><div class="two">'+stat('Per week · '+wr,rw)+stat('Per month · '+mname+' '+y,rm)+'</div><div class="s">Year '+y+': '+(ry.p==null?'—':ry.p+'%')+' · fully compliant = BCP sent and discussion done</div></div>';
   $('#cards').innerHTML=(who?
     card(cur?'This week':'Week of '+fd(iso(ws)),W.length,days(W,iso(ws),iso(we))+' days · '+wr)+
     card(mname,M.length,days(M,ms,me)+' days plotted')+
@@ -125,8 +127,8 @@ function render(){
     card('Upcoming PTOs incomplete',need,'missing BCP or discussion'))+comp;
   const miss=W.filter(e=>st(e)<2).sort((a,b)=>(a.bcpSent?1:0)-(b.bcpSent?1:0)||a.start.localeCompare(b.start));
   $('#attn').innerHTML='<div class="l">Needs BCP attention · '+(cur?'this week':'week of '+fd(iso(ws)))+' ('+wr+')'+(who?' · '+esc(names.get(who)):'')+'</div>'+
-    (miss.length?'<div class="n">'+miss.length+'</div>'+miss.map(e=>'<div class="arow" data-id="'+esc(e.id)+'"><strong>'+esc(e.name)+'</strong><span class="m">'+esc(e.type)+' · '+rng(e)+'</span>'+(e.bcpSent?'':'<span class="b c0">BCP not sent</span>')+(e.bcpDiscussion?'':'<span class="b c1">Discussion not plotted</span>')+'</div>').join(''):
-    '<div class="s" style="margin-top:6px">'+(W.length?'✓ Everyone out '+(cur?'this week':'that week')+' has sent their BCP and plotted the discussion.':'No one is out '+(cur?'this week':'that week')+'.')+'</div>');
+    (miss.length?'<div class="n">'+miss.length+'</div>'+miss.map(e=>'<div class="arow" data-id="'+esc(e.id)+'"><strong>'+esc(e.name)+'</strong><span class="m">'+esc(e.type)+' · '+rng(e)+'</span>'+(e.bcpSent?'':'<span class="b c0">BCP not sent</span>')+(e.bcpDiscussion?'':'<span class="b c1">Discussion pending</span>')+'</div>').join(''):
+    '<div class="s" style="margin-top:6px">'+(W.length?'✓ Everyone out '+(cur?'this week':'that week')+' has sent their BCP and completed the discussion.':'No one is out '+(cur?'this week':'that week')+'.')+'</div>');
   $('#wr').textContent=wr;$('#wnav').style.display=period==='week'?'':'none';
   document.querySelectorAll('.seg button').forEach(b=>b.classList.toggle('on',b.dataset.p===period));
   let h=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d=>'<div class="dh">'+d+'</div>').join('');
@@ -145,7 +147,7 @@ function render(){
     '<tr><th>Name</th><th>Type</th><th>Dates</th><th>BCP sent</th><th>BCP discussion</th><th>Status</th><th></th></tr>'+
     rows.map(e=>'<tr><td>'+esc(e.name)+'</td><td>'+esc(e.type)+'</td><td>'+rng(e)+'</td>'+
       '<td><input type="checkbox" data-f="bcpSent" data-id="'+esc(e.id)+'"'+(e.bcpSent?' checked':'')+(isAdmin?'':' disabled')+'></td>'+
-      '<td><input type="checkbox" data-f="bcpDiscussion" data-id="'+esc(e.id)+'"'+(e.bcpDiscussion?' checked':'')+(isAdmin?'':' disabled')+'></td>'+
+      '<td>'+(isAdmin?'<select data-f="via" data-id="'+esc(e.id)+'" style="width:auto">'+VIA.map(([v,l])=>'<option value="'+v+'"'+(via(e)===v?' selected':'')+'>'+l+'</option>').join('')+'</select>':esc(VL[via(e)]))+'</td>'+
       '<td>'+badge(e)+'</td><td>'+(isAdmin?'<button data-id="'+esc(e.id)+'">Edit</button>':'')+'</td></tr>').join('')
     :'<tr><td class="empty">'+('No entries in this period'+(who?' for '+esc(names.get(who)):'')+'.')+'</td></tr>';
 }
@@ -155,7 +157,7 @@ function openForm(e,d){
   $('#dt').textContent=e?'Edit entry':'Add PTO';
   $('#fn').value=e?e.name:'';$('#ft').value=e?e.type:'PTO';
   $('#fs').value=e?e.start:(d||todayS);$('#fe').value=e&&e.end!==e.start?e.end:'';
-  $('#fb').checked=!!(e&&e.bcpSent);$('#fd').checked=!!(e&&e.bcpDiscussion);
+  $('#fb').checked=!!(e&&e.bcpSent);$('#fv').value=e?via(e):'';
   $('#fo').value=e&&e.note?e.note:'';$('#err').textContent='';
   $('#del').style.display=e?'':'none';
   $('#dlg').showModal();
@@ -174,7 +176,7 @@ const werr=(err,m)=>{
   if(String(err.message).includes('Not authorized')){setAdmin(false);load().then(()=>note('Your admin session is no longer valid. Please sign in again.'))}
   else note(m);
 };
-const API_URL='https://script.google.com/macros/s/AKfycbyEMUW1p1Grgjw1rkRW59qbFgW_7ONDevuAYXL7clBXytJacI-n9IqEaUvwjUkZqPKvMg/exec'; // paste your Apps Script web app URL here (see README)
+const API_URL=''; // paste your Apps Script web app URL here (see README)
 const KEY='pto-bcp-cache';
 const call=async p=>{const r=await fetch(API_URL+'?'+new URLSearchParams(p));const j=await r.json();if(!j.ok)throw new Error(j.error||'failed');return j};
 const cache=()=>{try{localStorage.setItem(KEY,JSON.stringify(entries))}catch(e){}};
@@ -200,7 +202,7 @@ $('#save').onclick=async()=>{
   const name=$('#fn').value.trim(),s=$('#fs').value,e=$('#fe').value||s;
   if(!name||!s){$('#err').textContent='Please add a name and a start date.';return}
   if(e<s){$('#err').textContent='The end date can’t be before the start date.';return}
-  const data={name,type:$('#ft').value,start:s,end:e,bcpSent:$('#fb').checked,bcpDiscussion:$('#fd').checked,note:$('#fo').value.trim()};
+  const data={name,type:$('#ft').value,start:s,end:e,bcpSent:$('#fb').checked,bcpDiscussion:!!$('#fv').value,discussionVia:$('#fv').value,note:$('#fo').value.trim()};
   $('#dlg').close();
   await persist(data,editing?editing.id:null);
 };
@@ -211,7 +213,7 @@ $('#next').onclick=()=>{view.setMonth(view.getMonth()+1);render()};
 $('#tod').onclick=()=>{view=new Date();view.setDate(1);wk=curWeek();render()};
 $('#add').onclick=()=>openForm(null);
 document.addEventListener('click',ev=>{
-  if(ev.target.closest('input,dialog')||!isAdmin)return;
+  if(ev.target.closest('input,select,dialog')||!isAdmin)return;
   const c=ev.target.closest('[data-id]');
   if(c){const e=entries.find(x=>x.id===c.dataset.id);if(e)openForm(e);return}
   const d=ev.target.closest('[data-d]');if(d)openForm(null,d.dataset.d);
@@ -219,7 +221,7 @@ document.addEventListener('click',ev=>{
 document.addEventListener('change',ev=>{
   const f=ev.target.dataset&&ev.target.dataset.f;if(!f)return;
   const e=entries.find(x=>x.id===ev.target.dataset.id);if(!e)return;
-  const {id,...rest}=e;persist({...rest,[f]:ev.target.checked},id);
+  const {id,...rest}=e;persist(f==='via'?{...rest,discussionVia:ev.target.value,bcpDiscussion:!!ev.target.value}:{...rest,[f]:ev.target.checked},id);
 });
 $('#who').onchange=()=>{who=$('#who').value;render()};
 document.querySelectorAll('.seg button').forEach(b=>b.onclick=()=>{period=b.dataset.p;render()});
@@ -236,8 +238,8 @@ $('#alogin').onclick=async()=>{
 };
 $('#csv').onclick=()=>{
   const q=v=>{let t=String(v==null?'':v);if(/^[=+\-@\t\r]/.test(t))t="'"+t;return '"'+t.replace(/"/g,'""')+'"'};
-  const rows=[['Name','Type','Start','End','Days','BCP sent','BCP discussion plotted','Status','Notes']];
-  entries.slice().sort((a,b)=>a.start.localeCompare(b.start)||String(a.name).localeCompare(b.name)).forEach(e=>rows.push([e.name,e.type,e.start,e.end,days([e],e.start,e.end),e.bcpSent?'Yes':'No',e.bcpDiscussion?'Yes':'No',['Missing BCP','Partial','Compliant'][st(e)],e.note||'']));
+  const rows=[['Name','Type','Start','End','Days','BCP sent','BCP discussion','Status','Notes']];
+  entries.slice().sort((a,b)=>a.start.localeCompare(b.start)||String(a.name).localeCompare(b.name)).forEach(e=>rows.push([e.name,e.type,e.start,e.end,days([e],e.start,e.end),e.bcpSent?'Yes':'No',({plotted:'Plotted before PTO',weekly:'Happened on weekly check-in',notneeded:'Not needed'})[via(e)]||'No',['Missing BCP','Partial','Compliant'][st(e)],e.note||'']));
   const blob=new Blob(['\ufeff'+rows.map(r=>r.map(q).join(',')).join('\r\n')],{type:'text/csv;charset=utf-8'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='pto-bcp-'+todayS+'.csv';
   document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
